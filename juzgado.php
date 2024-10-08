@@ -25,6 +25,13 @@ if (isset($_POST['create'])) {
     $conn->query($sql);
 }
 
+// Manejo de búsqueda
+$searchQuery = '';
+if (isset($_POST['search'])) {
+    $searchQuery = $_POST['searchQuery'];
+    $searchQuery = $conn->real_escape_string($searchQuery); // Previene inyección SQL
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -34,11 +41,27 @@ if (isset($_POST['create'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRUD Juzgado</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .btn-custom {
+            border-radius: 20px; /* Bordes más redondeados */
+            background-color: #007bff; /* Azul */
+            color: white;
+        }
+    </style>
 </head>
 <body>
 
 <div class="container mt-5">
     <h1 class="mb-4">Gestión de Juzgado</h1>
+
+    <!-- Contenedor para el botón y la búsqueda -->
+    <div class="d-flex justify-content-between mb-3">
+        <form method="post" class="form-inline">
+            <input type="text" class="form-control mr-2" name="searchQuery" placeholder="Buscar por Juzgado o Nombre" value="<?php echo htmlspecialchars($searchQuery); ?>">
+            <button type="submit" class="btn btn-primary" name="search">Buscar</button>
+        </form>
+        <a href="index.php" class="btn btn-custom">Regresar</a>
+    </div>
 
     <!-- Formulario para Crear/Actualizar -->
     <?php
@@ -85,7 +108,12 @@ if (isset($_POST['create'])) {
         </thead>
         <tbody>
             <?php
-            $result = $conn->query("SELECT * FROM juzgado");
+            // Consulta con filtro de búsqueda
+            $sql = "SELECT * FROM juzgado";
+            if ($searchQuery) {
+                $sql .= " WHERE Juzgado LIKE '%$searchQuery%' OR Nombre LIKE '%$searchQuery%'";
+            }
+            $result = $conn->query($sql);
             while ($row = $result->fetch_assoc()) {
                 echo "<tr>
                     <td>{$row['CodigoJ']}</td>
@@ -102,10 +130,6 @@ if (isset($_POST['create'])) {
             ?>
         </tbody>
     </table>
-    <!-- Botón Regresar -->
-    <div class="mt-4 text-right">
-        <a href="index.php" class="btn btn-secondary">Regresar</a>
-    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

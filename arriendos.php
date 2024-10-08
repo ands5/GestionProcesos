@@ -25,9 +25,9 @@ if (isset($_POST['create'])) {
 
     $sql = "UPDATE arriendo SET DiaPago='$diaPago', Concepto='$concepto', Valor='$valor', CodigoProc='$codigoProc', MatInmu='$matInmu' WHERE CodigoA=$codigoA";
     $conn->query($sql); 
-
 }
 
+$searchQuery = isset($_POST['searchQuery']) ? $_POST['searchQuery'] : '';
 ?>
 
 <!DOCTYPE html>
@@ -43,57 +43,64 @@ if (isset($_POST['create'])) {
 <div class="container mt-5">
     <h1 class="mb-4">Gestión de Arriendos</h1>
 
+    <div class="d-flex justify-content-between mb-3">
+        <form method="post" class="form-inline">
+            <input type="text" class="form-control mr-2" name="searchQuery" placeholder="Buscar por Día de Pago, Código Proc o Matrícula" value="<?php echo htmlspecialchars($searchQuery); ?>">
+            <button type="submit" class="btn btn-primary" name="search">Buscar</button>
+        </form>
+        <a href="index.php" class="btn btn-primary">Regresar</a>
+    </div>
+
     <!-- Formulario para Crear/Actualizar -->
     <?php
     if (isset($_GET['edit'])) {
         $codigoA = $_GET['edit'];
-        $result = $conn->query("SELECT * FROM arriendo WHERE codigoA = $codigoA");
+        $result = $conn->query("SELECT * FROM arriendo WHERE CodigoA = $codigoA");
         $row = $result->fetch_assoc();
     }
-
     ?>
     <form method="post" action="arriendos.php">
-        <input type="hidden" name="CodigoA" value="<?php echo isset($row['codigoA']) ? $row['codigoA'] : ''; ?>">
+        <input type="hidden" name="CodigoA" value="<?php echo isset($row['CodigoA']) ? $row['CodigoA'] : ''; ?>">
         <div class="form-group">
             <label for="DiaPago">Día del pago</label>
             <input type="date" class="form-control" id="DiaPago" name="DiaPago" value="<?php echo isset($row['DiaPago']) ? $row['DiaPago'] : ''; ?>" required>
         </div>
         <div class="form-group">
             <label for="Concepto">Concepto</label>
-            <input type="text" class="form-control" id="Concepto" name="Concepto" value="<?php echo isset($row['concepto']) ? $row['concepto'] : ''; ?>" required>
+            <input type="text" class="form-control" id="Concepto" name="Concepto" value="<?php echo isset($row['Concepto']) ? $row['Concepto'] : ''; ?>" required>
         </div>
         <div class="form-group">
             <label for="Valor">Valor ($ COP)</label>
-            <input type="number" step="0.01" class="form-control" id="Valor" name="Valor" value="<?php echo isset($row['valor']) ? $row['valor'] : ''; ?>" required>
+            <input type="number" step="0.01" class="form-control" id="Valor" name="Valor" value="<?php echo isset($row['Valor']) ? $row['Valor'] : ''; ?>" required>
         </div>
         <div class="form-group">
-            <label for="CodigoP">Código del proceso</label>
+            <label for="CodigoProc">Código del proceso</label>
             <select class="form-control" id="CodigoProc" name="CodigoProc" required>
                 <?php
                 $procesos = $conn->query("SELECT CodigoP, Demandante, Demandado FROM proceso");
                 while ($proceso = $procesos->fetch_assoc()) {
                     echo "<option value='{$proceso['CodigoP']}'" . 
-                    (isset($row['codigoProc']) && $row['codigoProc'] == $proceso['CodigoP'] ? ' selected' : '') . 
+                    (isset($row['CodigoProc']) && $row['CodigoProc'] == $proceso['CodigoP'] ? ' selected' : '') . 
                     ">{$proceso['CodigoP']} - {$proceso['Demandante']} demanda a {$proceso['Demandado']}</option>";
                 }
                 ?>
             </select>
         </div>
         <div class="form-group">
-            <label for="CodigoP">Matricula del inmueble - Dirección</label>
+            <label for="MatInmu">Matrícula del inmueble - Dirección</label>
             <select class="form-control" id="MatInmu" name="MatInmu" required>
                 <?php
                 $inmuebles = $conn->query("SELECT Matricula, Direccion FROM inmueble");
                 while ($inmueble = $inmuebles->fetch_assoc()) {
                     echo "<option value='{$inmueble['Matricula']}'" . 
-                    (isset($row['matInmu']) && $row['matInmu'] == $inmueble['Matricula'] ? ' selected' : '') . 
+                    (isset($row['MatInmu']) && $row['MatInmu'] == $inmueble['Matricula'] ? ' selected' : '') . 
                     ">{$inmueble['Matricula']} - {$inmueble['Direccion']}</option>";
                 }
                 ?>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary" name="<?php echo isset($row['codigoA']) ? 'update' : 'create'; ?>">
-            <?php echo isset($row['codigoA']) ? 'Actualizar' : 'Crear'; ?>
+        <button type="submit" class="btn btn-primary" name="<?php echo isset($row['CodigoA']) ? 'update' : 'create'; ?>">
+            <?php echo isset($row['CodigoA']) ? 'Actualizar' : 'Crear'; ?>
         </button>
     </form>
 
@@ -101,7 +108,7 @@ if (isset($_POST['create'])) {
     <table class="table table-bordered mt-3">
         <thead class="thead-dark">
             <tr>
-                <th>Codigo Arriendo</th>
+                <th>Código Arriendo</th>
                 <th>Día de pago</th>
                 <th>Concepto</th>
                 <th>Valor</th>
@@ -112,14 +119,19 @@ if (isset($_POST['create'])) {
         </thead>
         <tbody>
             <?php
-            $result = $conn->query("
+            // Consulta con filtro de búsqueda
+            $sql = "
                 SELECT a.codigoA, a.diaPago, a.concepto, CONCAT('$', a.valor) as valor, 
                 CONCAT(p.CodigoP , ' - ', p.Demandante, ' demanda a ', p.Demandado) AS CodigoP, 
-                CONCAT(i.Matricula, ' - ', i.Direccion)  AS Inmueble 
+                CONCAT(i.Matricula, ' - ', i.Direccion) AS Inmueble 
                 FROM arriendo a 
                 JOIN proceso p ON a.CodigoProc = p.CodigoP 
                 JOIN inmueble i ON a.MatInmu = i.Matricula
-            ");
+            ";
+            if ($searchQuery) {
+                $sql .= " WHERE a.DiaPago LIKE '%$searchQuery%' OR a.CodigoProc LIKE '%$searchQuery%' OR a.MatInmu LIKE '%$searchQuery%'";
+            }
+            $result = $conn->query($sql);
             while ($row = $result->fetch_assoc()) {
                 echo "<tr>
                     <td>{$row['codigoA']}</td>
@@ -137,10 +149,6 @@ if (isset($_POST['create'])) {
             ?>
         </tbody>
     </table>
-    <!-- Botón Regresar -->
-    <div class="mt-4 text-right">
-        <a href="index.php" class="btn btn-secondary">Regresar</a>
-    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

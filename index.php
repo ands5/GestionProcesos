@@ -22,6 +22,11 @@
     <p>
         <a href="arriendos.php" class="btn btn-primary">Ir a la gestión de arriendos</a>
     </p>
+
+    <!-- Botón de Cerrar Sesión -->
+    <p>
+        <a href="logout.php" class="btn btn-danger">Cerrar sesión</a>
+    </p>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
